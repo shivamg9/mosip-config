@@ -1,4 +1,5 @@
-   <route id="packet-receiver-->securezone-notification migrator route">
+<routes xmlns="http://camel.apache.org/schema/spring">
+	<route id="packet-receiver-->securezone-notification migrator route">
       <from uri="eventbus://packet-receiver-migrator-bus-out" />
       <log message="packet-receiver-->securezone-notification migrator ${bodyAs(String)}" />
       <choice>
@@ -547,10 +548,4 @@
          </otherwise>
       </choice>
    </route>
-</routes>```
-## Rules & Restriction
-1. In Packet Creator Mode, If user specified specific field as applicationID for the Packet then MOSIP System will limit to accept packet only once. If user try to upload second time MOSIP will reject.
-    Ex: `mosip.extractor.application.id.column=CITIZEN_ID`
-
-
-For any static Value for Document, should be defined in Column Level. dont mention in SQL Query since system rewrite SQL Query
+</routes>
