@@ -1,0 +1,556 @@
+   <route id="packet-receiver-->securezone-notification migrator route">
+      <from uri="eventbus://packet-receiver-migrator-bus-out" />
+      <log message="packet-receiver-->securezone-notification migrator ${bodyAs(String)}" />
+      <choice>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == true &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://mark-as-reprocess" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == false)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+         </when>
+         <otherwise>
+            <process ref="tokenGenerationProcessor" />
+            <setHeader headerName="CamelHttpMethod">
+               <constant>POST</constant>
+            </setHeader>
+            <setHeader headerName="Content-Type">
+               <constant>application/json</constant>
+            </setHeader>
+            <setHeader headerName="Cookie">
+               <simple>${header.Cookie}</simple>
+            </setHeader>
+            <setBody>
+               <simple>${bodyAs(String)}</simple>
+            </setBody>
+            <to uri="http://regproc-group2.regproc/registrationprocessor/v1/securezone/notification" />
+         </otherwise>
+      </choice>
+   </route>
+   <!-- securezone-notification to packet-uploader Route -->
+   <route id="securezone-notification-->packet-uploader migrator route">
+      <from uri="eventbus://securezone-notification-migrator-bus-out" />
+      <log message="securezone-notification-->packet-uploader migrator route ${bodyAs(String)}" />
+      <choice>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == true &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://mark-as-reprocess" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == false)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+         </when>
+         <otherwise>
+            <to uri="eventbus://packet-uploader-bus-in" />
+         </otherwise>
+      </choice>
+   </route>
+   <!-- packet-uploader to packet-validator Route -->
+   <route id="packet-uploader-->packet-validator migrator route">
+      <from uri="eventbus://packet-uploader-migrator-bus-out" />
+      <log message="packet-uploader-->packet-validator migrator route ${bodyAs(String)}" />
+      <choice>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == true &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://mark-as-reprocess" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == false)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+         </when>
+         <otherwise>
+            <to uri="eventbus://packet-validator-bus-in" />
+         </otherwise>
+      </choice>
+   </route>
+   <!-- Packet Validator to Packet classifier Route -->
+   <route id="packet-validator-->packet-classifier migrator route">
+      <from uri="eventbus://packet-validator-migrator-bus-out" />
+      <log message="packet-validator-->packet-classifier migrator route ${bodyAs(String)}" />
+      <choice>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == true &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://mark-as-reprocess" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == false)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <otherwise>
+            <to uri="eventbus://packet-classifier-bus-in" />
+         </otherwise>
+      </choice>
+   </route>
+   <!-- Packet Classifier to Quality Classifier Route -->
+   <route id="packet-classifier-->cmd-validator migrator route">
+      <from uri="eventbus://packet-classifier-migrator-bus-out" />
+      <log message="packet-classifier-->quality-classifier migrator route ${bodyAs(String)}" />
+      <choice>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == true &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://mark-as-reprocess" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == false)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <otherwise>
+            <to uri="eventbus://c-m-d-validator-bus-in" />
+         </otherwise>
+      </choice>
+   </route>
+   <route id="cmd-validator-->operator-validator migrator route">
+      <from uri="eventbus://c-m-d-validator-migrator-bus-out" />
+      <log message="cmd-validator-->operator-validator/supervisor-validator migrator route ${bodyAs(String)}" />
+      <choice>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == true &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://mark-as-reprocess" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == false)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath suppressExceptions="true">$.[?(@['tags']['META_INFO-OPERATIONS_DATA-officerId'] != '' &amp;&amp; @['tags']['META_INFO-OPERATIONS_DATA-officerId'] != '--TAG_VALUE_NOT_AVAILABLE--')]</jsonpath>
+            <to uri="eventbus://operator-validator-bus-in" />
+         </when>
+         <when>
+            <jsonpath suppressExceptions="true">$.[?(@['tags']['META_INFO-OPERATIONS_DATA-supervisorId'] != '' &amp;&amp; @['tags']['META_INFO-OPERATIONS_DATA-supervisorId'] != '--TAG_VALUE_NOT_AVAILABLE--')]</jsonpath>
+            <to uri="eventbus://supervisor-validator-bus-in" />
+         </when>
+         <otherwise>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </otherwise>
+      </choice>
+   </route>
+   <route id="operator-validator-->supervisor-validator migrator route">
+      <from uri="eventbus://operator-validator-migrator-bus-out" />
+      <log message="operator-validator-->supervisor-validator/introducer-validator/demo-dedupe migrator route ${bodyAs(String)}" />
+      <choice>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == true &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://mark-as-reprocess" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == false)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath suppressExceptions="true">$.[?(@['tags']['META_INFO-OPERATIONS_DATA-supervisorId'] != '' &amp;&amp; @['tags']['META_INFO-OPERATIONS_DATA-supervisorId'] != '--TAG_VALUE_NOT_AVAILABLE--')]</jsonpath>
+            <to uri="eventbus://supervisor-validator-bus-in" />
+         </when>
+         <when>
+            <jsonpath suppressExceptions="true">$.[?((@['tags']['AGE_GROUP'] == 'INFANT' || @['tags']['AGE_GROUP'] == 'MINOR') &amp;&amp; @['tags']['INTRODUCER_AVAILABILITY'] == 'true')]</jsonpath>
+            <to uri="eventbus://introducer-validator-bus-in" />
+         </when>
+         <otherwise>
+            <to uri="eventbus://quality-classifier-bus-in" />
+         </otherwise>
+      </choice>
+   </route>
+   <route id="supervisor-validator-->introducer-validator migrator route">
+      <from uri="eventbus://supervisor-validator-migrator-bus-out" />
+      <log message="supervisor-validator-->introducer-validator/demo-dedupe migrator route ${bodyAs(String)}" />
+      <choice>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == true &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://mark-as-reprocess" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == false)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath suppressExceptions="true">$.[?((@['tags']['AGE_GROUP'] == 'INFANT' || @['tags']['AGE_GROUP'] == 'MINOR') &amp;&amp; @['tags']['INTRODUCER_AVAILABILITY'] == 'true')]</jsonpath>
+            <to uri="eventbus://introducer-validator-bus-in" />
+         </when>
+         <otherwise>
+            <to uri="eventbus://quality-classifier-bus-in" />
+         </otherwise>
+      </choice>
+   </route>
+   <route id="introducer-validator-->quality-classifier migrator route">
+      <from uri="eventbus://introducer-validator-migrator-bus-out" />
+      <log message="packet-classifier-->quality-classifier migrator route ${bodyAs(String)}" />
+      <choice>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == true &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://mark-as-reprocess" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == false)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <otherwise>
+            <to uri="eventbus://quality-classifier-bus-in" />
+         </otherwise>
+      </choice>
+   </route>
+   <route id="quality-classifier-->demo-dedupe migrator route">
+      <from uri="eventbus://quality-classifier-migrator-bus-out" />
+      <log message="quality-classifier-->demo-dedupe migrator route ${bodyAs(String)}" />
+      <choice>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == true &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://mark-as-reprocess" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == false)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath suppressExceptions="true">$.[?(@['tags']['BIOMETRIC_CORRECTION_FLOW_STATUS'] in ['FAILED'] || @['tags']['BIOMETRIC_CORRECTION_FLOW_STATUS'] in ['REJECTED'])]</jsonpath>
+            <setProperty propertyName="ADDITIONAL_INFO_PROCESS"><constant>BIOMETRIC_CORRECTION</constant></setProperty>
+            <setProperty propertyName="PAUSE_FOR"><constant>1296000</constant></setProperty>
+            <to uri="workflow-cmd://pause-and-request-additional-info" />
+         </when>
+         <when>
+            <jsonpath suppressExceptions="true">$.[?(@['tags']['Biometric_Quality-Iris'] in ['Average', 'Good','--Biometrics-Not-Available--'] &amp;&amp; @['tags']['Biometric_Quality-Finger'] in ['Average', 'Good', '--Biometrics-Not-Available--'] &amp;&amp; @['tags']['Biometric_Quality-Face'] in ['Average', 'Good', '--Biometrics-Not-Available--'])]</jsonpath>
+            <to uri="eventbus://demo-dedupe-bus-in" />
+         </when>
+         <when>
+            <jsonpath suppressExceptions="true">$.[?(@['tags']['Biometric_Quality-Iris'] in ['Poor'] || @['tags']['Biometric_Quality-Finger'] in ['Poor'] || @['tags']['Biometric_Quality-Face'] in ['Poor'])]</jsonpath>
+            <setProperty propertyName="ADDITIONAL_INFO_PROCESS"><constant>BIOMETRIC_CORRECTION</constant></setProperty>
+            <!-- PAUSE_FOR is in seconds -->
+            <setProperty propertyName="PAUSE_FOR"><constant>1296000</constant></setProperty>
+            <to uri="workflow-cmd://pause-and-request-additional-info" />
+         </when>
+         <otherwise>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </otherwise>
+      </choice>
+   </route>
+   <route id="demo-dedupe-->bio-dedupe migrator route">
+      <from uri="eventbus://demo-dedupe-migrator-bus-out" />
+      <log message="demo-dedupe-->bio-dedupe migrator route ${bodyAs(String)}" />
+      <choice>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == false)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-rejected" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath suppressExceptions="true">$.[?(@['messageBusAddress']['address'] == 'abis-handler-bus-in')]</jsonpath>
+            <to uri="eventbus://abis-handler-bus-in" />
+         </when>
+         <when>
+            <jsonpath suppressExceptions="true">$.[?(@['messageBusAddress']['address'] == 'manual-adjudication-bus-in')]</jsonpath>
+            <to uri="eventbus://manual-adjudication-bus-in" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == false)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-rejected" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <otherwise>
+            <to uri="eventbus://bio-dedupe-bus-in" />
+         </otherwise>
+      </choice>
+   </route>
+   <route id="abis-handler-->abis-middleware migrator route">
+      <from uri="eventbus://abis-handler-migrator-bus-out" />
+      <log message="abis-handler-->abis-middleware migrator route ${bodyAs(String)}" />
+      <choice>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == true &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://mark-as-reprocess" />
+         </when>
+          <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == false)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+             <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath suppressExceptions="true">$.[?(@['messageBusAddress']['address'] == 'abis-middle-ware-bus-in')]</jsonpath>
+            <to uri="eventbus://abis-middle-ware-bus-in" />
+         </when>
+         <when>
+            <jsonpath suppressExceptions="true">$.[?(@['messageBusAddress']['address'] == 'demo-dedupe-bus-in')]</jsonpath>
+            <to uri="eventbus://demo-dedupe-bus-in" />
+         </when>
+         <when>
+            <jsonpath suppressExceptions="true">$.[?(@['messageBusAddress']['address'] == 'bio-dedupe-bus-in')]</jsonpath>
+            <to uri="eventbus://bio-dedupe-bus-in" />
+         </when>
+		 <otherwise>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </otherwise>
+      </choice>
+   </route>
+   <route id="bio-dedupe-->uin-generation migrator route">
+      <from uri="eventbus://bio-dedupe-migrator-bus-out" />
+      <log message="bio-dedupe-->uin-generation migrator route ${bodyAs(String)}" />
+      <choice>
+        <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+           <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == true &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://mark-as-reprocess" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == false)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-rejected" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath suppressExceptions="true">$.[?(@['messageBusAddress']['address'] == 'verification-bus-in')]</jsonpath>
+            <to uri="eventbus://verification-bus-in" />
+         </when>
+         <when>
+            <jsonpath suppressExceptions="true">$.[?(@['messageBusAddress']['address'] == 'abis-handler-bus-in')]</jsonpath>
+            <to uri="eventbus://abis-handler-bus-in" />
+         </when>
+         <when>
+            <jsonpath suppressExceptions="true">$.[?(@['messageBusAddress']['address'] == 'manual-adjudication-bus-in')]</jsonpath>
+            <to uri="eventbus://manual-adjudication-bus-in" />
+         </when>
+         <otherwise>
+            <to uri="eventbus://uin-generator-bus-in" />
+         </otherwise>
+      </choice>
+   </route>
+   <route id="verification route-->uin-generator migrator route">
+      <from uri="eventbus://verification-migrator-bus-out" />
+      <log message="verification route-->uin-generator migrator route ${bodyAs(String)}" />
+      <choice>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == true &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://mark-as-reprocess" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == false)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <otherwise>
+            <to uri="eventbus://uin-generator-bus-in" />
+         </otherwise>
+      </choice>
+   </route>
+   <route id="abis-middleware route-->abis-handler migrator route">
+      <from uri="eventbus://abis-middle-ware-migrator-bus-out" />
+      <log message="abis-middleware route-->abis-handler migrator route ${bodyAs(String)}" />
+      <choice>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == true &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://mark-as-reprocess" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == false)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <otherwise>
+            <to uri="eventbus://abis-handler-bus-in" />
+         </otherwise>
+      </choice>
+   </route>
+   <route id="manual-adjudication-->uin-generation migrator route">
+      <from uri="eventbus://manual-adjudication-migrator-bus-out" />
+      <log message="manual-adjudication-->uin-generation migrator route ${bodyAs(String)}" />
+      <choice>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == true &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://mark-as-reprocess" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == false)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-rejected" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <otherwise>
+            <to uri="eventbus://uin-generator-bus-in" />
+         </otherwise>
+      </choice>
+   </route>
+   <!-- UIN Generator to biometric-extraction Route -->
+   <route id="uin-generation route-->biometric-extraction-stage migrator route">
+      <from uri="eventbus://uin-generator-migrator-bus-out" />
+      <log message="uin-generation-->biometric-extraction-stage route ${bodyAs(String)}" />
+      <choice>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == true &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://mark-as-reprocess" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == false)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <otherwise>
+            <to uri="eventbus://biometric-extraction-bus-in" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </otherwise>
+      </choice>
+   </route>
+   <!-- biometric-extraction to finalization Route -->
+   <route id="biometric-extraction route-->finalization-stage migrator route">
+      <from uri="eventbus://biometric-extraction-migrator-bus-out" />
+      <log message="biometric-extraction-->finalization-stage route ${bodyAs(String)}" />
+      <choice>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == true &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://mark-as-reprocess" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == false)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <otherwise>
+            <to uri="eventbus://finalization-bus-in" />
+         </otherwise>
+      </choice>
+   </route>
+   <!-- finalization to Printing Route -->
+   <route id="finalization route-->printing-stage migrator route">
+      <from uri="eventbus://finalization-migrator-bus-out" />
+      <log message="finalization-->printing-stage route ${bodyAs(String)}" />
+      <choice>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == true &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://mark-as-reprocess" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == false)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <otherwise>
+            <to uri="eventbus://printing-bus-in" />
+         </otherwise>
+      </choice>
+   </route>
+   <route id="printing-stage--> migrator route">
+      <from uri="eventbus://printing-migrator-bus-out" />
+      <log message="printing-stage--> route ${bodyAs(String)}" />
+      <choice>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == true &amp;&amp; @['internalError'] == true)]</jsonpath>
+            <to uri="workflow-cmd://mark-as-reprocess" />
+         </when>
+         <when>
+            <jsonpath>$.[?(@['isValid'] == false &amp;&amp; @['internalError'] == false)]</jsonpath>
+            <to uri="workflow-cmd://complete-as-failed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </when>
+         <otherwise>
+            <to uri="workflow-cmd://complete-as-processed" />
+            <to uri="workflow-cmd://anonymous-profile" />
+         </otherwise>
+      </choice>
+   </route>
+</routes>```
+## Rules & Restriction
+1. In Packet Creator Mode, If user specified specific field as applicationID for the Packet then MOSIP System will limit to accept packet only once. If user try to upload second time MOSIP will reject.
+    Ex: `mosip.extractor.application.id.column=CITIZEN_ID`
+
+
+For any static Value for Document, should be defined in Column Level. dont mention in SQL Query since system rewrite SQL Query
